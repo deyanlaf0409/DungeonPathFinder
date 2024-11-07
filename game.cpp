@@ -21,7 +21,7 @@
 
 #define FOV (PI / 3)  // 60 degrees FOV
 
-#define NUM_OF_RAYS 60 //30 //60 //960 //480 //240 //120
+#define NUM_OF_RAYS 120 //30 //60 //960 //480 //240 //120
 #define RAY_ANGLE_INC (FOV / NUM_OF_RAYS)
 #define MAP_SIZE 225//should be a multiple of MAP_ARRAY
 #define MAP_ARRAY 15//the size of our map in cells, maps always square
@@ -173,7 +173,7 @@ Ray rays[NUM_OF_RAYS];
 void drawMinimap() {
     // Set the map in the bottom right
     float translateY = WINDOW_HEIGHT - MAP_SIZE;
-    float visibilityRadius = 30.0f; // Adjust this as needed for visibility range
+    float visibilityRadius = 25.0f; // Adjust this as needed for visibility range
 
     // Draw the map border
     glColor3f(0, 0, 0);
@@ -258,7 +258,7 @@ void drawView(){
         }
         rays[i].distance = rays[i].distance * cos(fixFishEye);
 
-        intensity = 1.0 / (1.0 + 0.05 * rays[i].distance); // Adjust 0.01 for stronger/weaker effect
+        intensity = 1.0 / (1.0 + 0.1 * rays[i].distance); // Adjust 0.01 for stronger/weaker effect
 
         switch(rays[i].wallType){
             case 1: 
