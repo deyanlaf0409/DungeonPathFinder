@@ -44,8 +44,7 @@ int keyStates[256] = {0};
 
 
 
-std::random_device rd;
-std::mt19937 g(rd());
+std::mt19937 g(static_cast<unsigned int>(std::time(nullptr)));
 
 
 
@@ -180,7 +179,7 @@ Ray rays[NUM_OF_RAYS];
 void drawMinimap() {
     // Set the map in the bottom right
     float translateY = WINDOW_HEIGHT - MAP_SIZE;
-    float visibilityRadius = 25.0f; // Adjust this as needed for visibility range
+    float visibilityRadius = 1000.0f; // Adjust this as needed for visibility range
 
     // Draw the map border
     glColor3f(0, 0, 0);
@@ -265,7 +264,7 @@ void drawView(){
         }
         rays[i].distance = rays[i].distance * cos(fixFishEye);
 
-        intensity = 1.0 / (1.0 + 0.1 * rays[i].distance); // Adjust 0.01 for stronger/weaker effect
+        intensity = 1.0 / (1.0 + 0.01 * rays[i].distance); // Adjust 0.01 for stronger/weaker effect
 
         switch(rays[i].wallType){
             case 1: 
@@ -620,9 +619,7 @@ void timer(int value) {
     glutTimerFunc(16, timer, 0);  // 16 ms (60 FPS)
 }
 
-int main(int argc, char** argv){
-    std::random_device rd;
-    std::mt19937 g(rd());
+int main(int argc, char** argv){;
     srand(static_cast<unsigned>(time(0)));
     glutInit(&argc, argv);
     init();
