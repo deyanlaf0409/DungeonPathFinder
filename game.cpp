@@ -43,6 +43,13 @@ float playerAngle = 1.5;
 int keyStates[256] = {0};
 
 
+
+std::random_device rd;
+std::mt19937 g(rd());
+
+
+
+
 enum GameState {
     MENU,
     PAUSE_MENU,
@@ -96,12 +103,12 @@ void initializeMapWithWalls() {
 }
 
 // Recursive function for depth-first search-based maze generation
-void carveMaze(int x, int y) {
+void carveMaze(int x, int y, std::mt19937& g) {
     int directions[4][2] = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
     
     // Random device and generator for shuffling directions
-    std::random_device rd; 
-    std::mt19937 g(rd());    
+
+
     std::shuffle(std::begin(directions), std::end(directions), g); // Add the generator here
 
     for (int i = 0; i < 4; i++) {
@@ -113,7 +120,7 @@ void carveMaze(int x, int y) {
             // Carve path to the next cell
             map[ny * MAP_ARRAY + nx] = 0; // Mark the next cell as a path
             map[(y + directions[i][1]) * MAP_ARRAY + (x + directions[i][0])] = 0; // Mark the wall between cells as a path
-            carveMaze(nx, ny);  // Recurse
+            carveMaze(nx, ny, g);  // Recurse
         }
     }
 }
@@ -132,7 +139,7 @@ void generateMaze() {
     map[0 * MAP_ARRAY + 1] = 0; 
 
     // Carve the maze from the starting position
-    carveMaze(startX, startY); 
+    carveMaze(startX, startY, g); 
 
     // Ensure the last position of the map is a path (0) with enough space
     int endX = MAP_ARRAY - 1; // Last column
@@ -614,6 +621,8 @@ void timer(int value) {
 }
 
 int main(int argc, char** argv){
+    std::random_device rd;
+    std::mt19937 g(rd());
     srand(static_cast<unsigned>(time(0)));
     glutInit(&argc, argv);
     init();
