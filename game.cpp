@@ -56,7 +56,7 @@ enum GameState {
 };
 GameState currentState = MENU;
 
-int score = 0; 
+unsigned int score; 
 
 
 
@@ -633,4 +633,3 @@ int main(int argc, char** argv){;
     glutMainLoop();
     return 0;
 }
-
