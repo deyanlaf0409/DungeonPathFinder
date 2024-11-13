@@ -52,7 +52,7 @@ float qTable[MAP_ARRAY * MAP_ARRAY][NUM_ACTIONS];  // Q-table: State -> Action
 
 float alpha = std::max(0.01f, alpha * 0.995f);  // Gradually decay learning rate
 float epsilon = std::max(0.1f, epsilon * 0.99f); // Slower epsilon decay for more exploration
-float gamma = 0.9;  // Discount factor
+float gammaValue = 0.9f;  // Discount factor
 
 // Initialize the Q-table with zeros
 void initializeQTable() {
@@ -171,9 +171,8 @@ void updateMovementWithQLearning() {
     }
 
     // Update Q-value using the Q-learning formula
-    float discountFactor = 0.9f;  // Avoid naming conflict with "gamma" function
     float maxNextQ = *std::max_element(qTable[nextState], qTable[nextState] + NUM_ACTIONS);
-    qTable[currentState][action] = qTable[currentState][action] + alpha * (reward + discountFactor * maxNextQ - qTable[currentState][action]);
+    qTable[currentState][action] = qTable[currentState][action] + alpha * (reward + gammaValue * maxNextQ - qTable[currentState][action]);
 
     // Update player position if no wall was hit
     playerX = nextX;
