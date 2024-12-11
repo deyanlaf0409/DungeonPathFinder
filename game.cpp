@@ -1,4 +1,3 @@
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "link/stb_image.h"
 
@@ -24,8 +23,12 @@
 #define P3 3*PI/2
 //#define DEG 0.0174533
 
-#define WINDOW_HEIGHT 512
 #define WINDOW_WIDTH 1024
+#define WINDOW_HEIGHT 512
+
+// Global variables to hold dynamic screen resolution
+int screenWidth = WINDOW_WIDTH;
+int screenHeight = WINDOW_HEIGHT;
 
 #define FOV (PI / 3)  // 60 degrees FOV
 
@@ -146,42 +149,49 @@ void updateMovementWithQLearning() {
         break;
     }
 
-    // Calculate next position index in the map array
-    int nextState = ((int)nextY / ((int)MAP_CELL_SIZE)) * MAP_ARRAY + ((int)nextX / ((int)MAP_CELL_SIZE));
-
-    // Check for wall collision and path-following
-    if (map[nextState] != 0) {  // Collision with wall
-        reward = -10.0f;  // Larger penalty for hitting a wall
-        nextX = playerX;  // Reset to current position if wall hit
+    // Boundary check
+    if (nextX < 0 || nextX >= MAP_SIZE || nextY < 0 || nextY >= MAP_SIZE) {
+        reward = -20.0f;  // Larger penalty for attempting to move out of bounds
+        nextX = playerX;  // Revert position to prevent movement
         nextY = playerY;
     }
     else {
-        reward = 0.5f;  // Small reward for staying on the path (zero cell)
+        // Calculate next position index in the map array
+        int nextState = ((int)nextY / ((int)MAP_CELL_SIZE)) * MAP_ARRAY + ((int)nextX / ((int)MAP_CELL_SIZE));
 
-        // Calculate distance to the goal
-        float distanceToGoal = sqrt(pow(nextX - goalX, 2) + pow(nextY - goalY, 2));
+        // Check for wall collision
+        if (map[nextState] != 0) {  // Collision with wall
+            reward = -10.0f;  // Penalty for hitting a wall
+            nextX = playerX;  // Reset to current position
+            nextY = playerY;
+        }
+        else {
+            reward = 0.5f;  // Small reward for staying on the path (zero cell)
 
-        // Give higher reward as the agent gets closer to the goal
-        reward += (1.0f / (distanceToGoal + 1.0f)) * 10.0f;  // Inverse of distance
+            // Calculate distance to the goal
+            float distanceToGoal = sqrt(pow(nextX - goalX, 2) + pow(nextY - goalY, 2));
 
-        // Special large reward if reaching the exact goal position
-        if ((int)(nextX / MAP_CELL_SIZE) == MAP_ARRAY - 1 && (int)(nextY / MAP_CELL_SIZE) == MAP_ARRAY - 1) {
-            reward = 100.0f;  // Large reward for reaching the goal
+            // Give higher reward as the agent gets closer to the goal
+            reward += (1.0f / (distanceToGoal + 1.0f)) * 10.0f;  // Inverse of distance
+
+            // Special large reward if reaching the exact goal position
+            if ((int)(nextX / MAP_CELL_SIZE) == MAP_ARRAY - 1 && (int)(nextY / MAP_CELL_SIZE) == MAP_ARRAY - 1) {
+                reward = 200.0f;  // Large reward for reaching the goal
+            }
         }
     }
 
     // Update Q-value using the Q-learning formula
-    float maxNextQ = *std::max_element(qTable[nextState], qTable[nextState] + NUM_ACTIONS);
+    float maxNextQ = *std::max_element(qTable[currentState], qTable[currentState] + NUM_ACTIONS);
     qTable[currentState][action] = qTable[currentState][action] + alpha * (reward + gammaValue * maxNextQ - qTable[currentState][action]);
 
-    // Update player position if no wall was hit
+    // Update player position if no wall or boundary was hit
     playerX = nextX;
     playerY = nextY;
 
     // Trigger re-render
     glutPostRedisplay();
 }
-
 
 
 
@@ -435,7 +445,7 @@ void drawView() {
     float lineHeight;
     float fixFishEye;
     float intensity;
-    for (int i = 0; i < sizeof(rays) / sizeof(Ray); i++) {
+    for (unsigned int i = 0; i < sizeof(rays) / sizeof(Ray); i++) {
 
         // fix distortion (fish-eye effect)
         fixFishEye = playerAngle - rays[i].angle;
@@ -470,9 +480,6 @@ void drawView() {
         glEnd();
     }
 }
-
-
-
 
 
 //helper function for casting rays
@@ -541,7 +548,6 @@ void castRays() {
                 depth++;
             }
         }
-
 
 
         //VERTICAL RAY CHECK
@@ -616,7 +622,6 @@ void castRays() {
         }
     }
 }
-
 
 //TODO collision detection
 //tank controls
@@ -716,7 +721,11 @@ void mouseMotion(int x, int y) {
 
     // Calculate the change in x position
     int deltaX = x - lastX;
-    playerAngle += deltaX * MOUSE_SENSITIVITY;
+
+    // Avoid excessive mouse movement in full screen, set a reasonable limit
+    if (abs(deltaX) > 5) {  // You can adjust this threshold
+        playerAngle += deltaX * MOUSE_SENSITIVITY;
+    }
 
     // Warp the pointer to the center to allow for continuous movement
     isWarping = true;  // Set flag to indicate warping (avoiding looping)
@@ -727,35 +736,78 @@ void mouseMotion(int x, int y) {
 }
 
 
+
 void menuMouse(int button, int state, int x, int y) {
-    if (currentState == MENU || currentState == PAUSE_MENU) {
-        // Convert the window coordinates to match the button positions
-        if (x > WINDOW_WIDTH / 2 - 20 && x < WINDOW_WIDTH / 2 + 20) {
-            if (y > WINDOW_HEIGHT / 2 - 20 && y < WINDOW_HEIGHT / 2) {
-                currentState = GAME;  // Play button clicked
-            }
-            else if (currentState == PAUSE_MENU && y > WINDOW_HEIGHT / 2 + 5 && y < WINDOW_HEIGHT / 2 + 25) {
-                isTraining = true;
-                HANDLE trainingThread = CreateThread(
-                    NULL,                   // Default security attributes
-                    0,                      // Default stack size
-                    trainAgentThread,       // The function to run
-                    NULL,                   // Argument to the function
-                    0,                      // Default creation flags
-                    NULL                    // Thread ID (we don't need it)
-                );
-                if (trainingThread != NULL) {
-                    CloseHandle(trainingThread);  // Close the handle after creating the thread
-                }
-                currentState = GAME;
-            }
-            else if (y > WINDOW_HEIGHT / 2 + 20 && y < WINDOW_HEIGHT / 2 + 40) {
-                exit(0);  // Exit button clicked
-            }
+    // Get the actual window size dynamically
+    int windowWidth = glutGet(GLUT_WINDOW_WIDTH);
+    int windowHeight = glutGet(GLUT_WINDOW_HEIGHT);
+
+    // Scale mouse coordinates based on the current window size
+    float scaledX = (float)x / windowWidth;
+    float scaledY = (float)y / windowHeight;
+
+    // Define button width and height dynamically based on the window size
+    float buttonWidth = windowWidth * 0.2f;  // 20% of window width
+    float buttonHeight = windowHeight * 0.08f;  // 8% of window height
+
+    // Define the center positions of the buttons based on window size
+    float playButtonCenterX = windowWidth / 2;
+    float playButtonCenterY = windowHeight / 2 - 0.5 * buttonHeight;; // Move Play button slightly down
+
+    // Handle Play/Resume Button
+    if (scaledX > (playButtonCenterX - buttonWidth / 2) / windowWidth &&
+        scaledX < (playButtonCenterX + buttonWidth / 2) / windowWidth &&
+        scaledY >(playButtonCenterY - buttonHeight / 2) / windowHeight &&
+        scaledY < (playButtonCenterY + buttonHeight / 2) / windowHeight) {
+        // Play or Resume button clicked
+        if (currentState == PAUSE_MENU) {
+            currentState = GAME;  // Resume game
+        }
+        else {
+            currentState = GAME;  // Start new game
         }
     }
-    glutPostRedisplay();
+
+    // Check for Auto-Solve button if in PAUSE_MENU
+    if (currentState == PAUSE_MENU) {
+        float autoSolveButtonCenterY = windowHeight / 2; // Auto-solve below Play/Resume
+        if (scaledX > (playButtonCenterX - buttonWidth / 2) / windowWidth &&
+            scaledX < (playButtonCenterX + buttonWidth / 2) / windowWidth &&
+            scaledY >(autoSolveButtonCenterY - buttonHeight / 2) / windowHeight &&
+            scaledY < (autoSolveButtonCenterY + buttonHeight / 2) / windowHeight) {
+            // Auto-solve button clicked
+            isTraining = true;
+            HANDLE trainingThread = CreateThread(
+                NULL,                   // Default security attributes
+                0,                      // Default stack size
+                trainAgentThread,       // The function to run
+                NULL,                   // Argument to the function
+                0,                      // Default creation flags
+                NULL                    // Thread ID (we don't need it)
+            );
+            if (trainingThread != NULL) {
+                CloseHandle(trainingThread);  // Close the handle after creating the thread
+            }
+            currentState = GAME;
+        }
+    }
+
+    // Check for Exit button (move Exit button up without overlapping Auto-Solve)
+    float autoSolveButtonCenterY = windowHeight / 2;  // Auto-solve button's center
+    float exitButtonCenterY = autoSolveButtonCenterY + buttonHeight; // Exit button is now above Auto-Solve
+    if (scaledX > (playButtonCenterX - buttonWidth / 2) / windowWidth &&
+        scaledX < (playButtonCenterX + buttonWidth / 2) / windowWidth &&
+        scaledY >(exitButtonCenterY - buttonHeight / 2) / windowHeight &&
+        scaledY < (exitButtonCenterY + buttonHeight / 2) / windowHeight) {
+        exit(0);  // Exit button clicked
+    }
+
+    glutPostRedisplay();  // Redraw the screen after the mouse interaction
 }
+
+
+
+
 
 
 
@@ -809,6 +861,7 @@ void menuDisplay() {
 }
 
 
+
 void display() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -823,7 +876,7 @@ void display() {
     else if (currentState == GAME) {
         // Game display code
         glutSetCursor(GLUT_CURSOR_NONE);
-        glutWarpPointer(WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2); // Center the cursor
+        glutWarpPointer(screenWidth / 2, screenHeight / 2); // Center the cursor
         glutPassiveMotionFunc(mouseMotion);
         glutMotionFunc(mouseMotion);
 
@@ -837,10 +890,17 @@ void display() {
 
 
 void init() {
+    int actualScreenWidth = glutGet(GLUT_SCREEN_WIDTH);
+    int actualScreenHeight = glutGet(GLUT_SCREEN_HEIGHT);
+
+    // Set the dynamic screen resolution for full-screen
+    screenWidth = actualScreenWidth;
+    screenHeight = actualScreenHeight;
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_MULTISAMPLE);
     glEnable(GLUT_MULTISAMPLE | GL_DEPTH_TEST | GL_TEXTURE_2D | GL_BLEND);
     glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     glutCreateWindow("Dungeon Path Finder");
+    glutFullScreen();
     glewInit();
     loadWallTextures();
     glClearColor(0, 0, 0, 0);
