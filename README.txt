@@ -1,6 +1,6 @@
 
 
-g++ -o game game.cpp -lGL -lGLU -lglut -Wall
+g++ game.cpp -o run -lopengl32 -lglu32 -lfreeglut -lglew32 -static -static-libgcc -static-libstdc++ -Wall
 
 
 
