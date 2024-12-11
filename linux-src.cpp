@@ -43,7 +43,7 @@ int screenHeight = WINDOW_HEIGHT;
 #define TURNING_ANGLE 0.07
 #define SPEED    PLAYER_SIZE/7
 
-#define MOUSE_SENSITIVITY 0.0005
+#define MOUSE_SENSITIVITY 0.0015
 
 #define NUM_WALL_TYPES 2 
 GLuint wallTextures[NUM_WALL_TYPES];
@@ -460,10 +460,10 @@ void drawView() {
         switch (rays[i].wallType) {
         case 1:
             if (rays[i].vertical) {
-                glColor3f(0.1 * intensity, 0.1 * intensity, 0.1 * intensity);
+                glColor3f(0.2 * intensity, 0.2 * intensity, 0.2 * intensity);
             }
             else {
-                glColor3f(0.05 * intensity, 0.05 * intensity, 0.05 * intensity);
+                glColor3f(0.15 * intensity, 0.15 * intensity, 0.15 * intensity);
             }
             break;
         }
