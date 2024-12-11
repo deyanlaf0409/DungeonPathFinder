@@ -149,43 +149,41 @@ void updateMovementWithQLearning() {
         break;
     }
 
-    // Boundary check
     if (nextX < 0 || nextX >= MAP_SIZE || nextY < 0 || nextY >= MAP_SIZE) {
         reward = -20.0f;  // Larger penalty for attempting to move out of bounds
         nextX = playerX;  // Revert position to prevent movement
         nextY = playerY;
     }
+
+    // Calculate next position index in the map array
+    int nextState = ((int)nextY / ((int)MAP_CELL_SIZE)) * MAP_ARRAY + ((int)nextX / ((int)MAP_CELL_SIZE));
+
+    // Check for wall collision and path-following
+    if (map[nextState] != 0) {  // Collision with wall
+        reward = -10.0f;  // Larger penalty for hitting a wall
+        nextX = playerX;  // Reset to current position if wall hit
+        nextY = playerY;
+    }
     else {
-        // Calculate next position index in the map array
-        int nextState = ((int)nextY / ((int)MAP_CELL_SIZE)) * MAP_ARRAY + ((int)nextX / ((int)MAP_CELL_SIZE));
+        reward = 0.5f;  // Small reward for staying on the path (zero cell)
 
-        // Check for wall collision
-        if (map[nextState] != 0) {  // Collision with wall
-            reward = -10.0f;  // Penalty for hitting a wall
-            nextX = playerX;  // Reset to current position
-            nextY = playerY;
-        }
-        else {
-            reward = 0.5f;  // Small reward for staying on the path (zero cell)
+        // Calculate distance to the goal
+        float distanceToGoal = sqrt(pow(nextX - goalX, 2) + pow(nextY - goalY, 2));
 
-            // Calculate distance to the goal
-            float distanceToGoal = sqrt(pow(nextX - goalX, 2) + pow(nextY - goalY, 2));
+        // Give higher reward as the agent gets closer to the goal
+        reward += (1.0f / (distanceToGoal + 1.0f)) * 10.0f;  // Inverse of distance
 
-            // Give higher reward as the agent gets closer to the goal
-            reward += (1.0f / (distanceToGoal + 1.0f)) * 10.0f;  // Inverse of distance
-
-            // Special large reward if reaching the exact goal position
-            if ((int)(nextX / MAP_CELL_SIZE) == MAP_ARRAY - 1 && (int)(nextY / MAP_CELL_SIZE) == MAP_ARRAY - 1) {
-                reward = 200.0f;  // Large reward for reaching the goal
-            }
+        // Special large reward if reaching the exact goal position
+        if ((int)(nextX / MAP_CELL_SIZE) == MAP_ARRAY - 1 && (int)(nextY / MAP_CELL_SIZE) == MAP_ARRAY - 1) {
+            reward = 200.0f;  // Large reward for reaching the goal
         }
     }
 
     // Update Q-value using the Q-learning formula
-    float maxNextQ = *std::max_element(qTable[currentState], qTable[currentState] + NUM_ACTIONS);
+    float maxNextQ = *std::max_element(qTable[nextState], qTable[nextState] + NUM_ACTIONS);
     qTable[currentState][action] = qTable[currentState][action] + alpha * (reward + gammaValue * maxNextQ - qTable[currentState][action]);
 
-    // Update player position if no wall or boundary was hit
+    // Update player position if no wall was hit
     playerX = nextX;
     playerY = nextY;
 
